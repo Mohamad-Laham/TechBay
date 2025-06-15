@@ -1,0 +1,140 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechBay - E-Commerce Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1467.0.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 flex justify-between items-center">
+        <button id="backBtn" class="text-white hover:text-gray-200">← Back</button>
+        <h1 id="pageTitle" class="text-2xl font-bold">TechBay</h1>
+        <button id="authBtn" class="px-4 py-2 bg-blue-800 rounded hover:bg-blue-700">Login</button>
+        <button id="profileBtn" class="ml-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Profile</button>
+        <button id="adminBtn" class="ml-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Admin Panel</button>
+    </header>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="container mx-auto p-4">
+        <!-- Homepage -->
+        <div id="homePage" class="hidden">
+            <div class="flex flex-wrap gap-4 mb-6">
+                <button class="category-btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-category="all">All</button>
+                <button class="category-btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-category="television">Televisions</button>
+                <button class="category-btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-category="pcscreen">PC Screens</button>
+                <button class="category-btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-category="pc">PCs</button>
+                <button class="category-btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-category="laptop">Laptops</button>
+                <button class="category-btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-category="tablet">Tablets</button>
+                <button class="category-btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-category="phone">Phones</button>
+                <button class="category-btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" data-category="headphone">Headphones</button>
+            </div>
+            <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            <button id="checkoutBtn" class="mt-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Proceed to Checkout</button>
+        </div>
+
+        <!-- Product Details Page -->
+        <div id="productPage" class="hidden">
+            <div id="productDetails" class="bg-white p-6 rounded shadow"></div>
+            <div class="mt-4">
+                <label for="colorSelect" class="block text-lg font-medium">Select Color:</label>
+                <select id="colorSelect" class="mt-2 p-2 border rounded"></select>
+                <button id="addToCartBtn" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Add to Cart</button>
+            </div>
+        </div>
+
+        <!-- Checkout Page -->
+        <div id="checkoutPage" class="hidden">
+            <h2 class="text-2xl font-bold mb-4">Checkout</h2>
+            <div id="cartItems" class="bg-white p-6 rounded shadow"></div>
+            <button id="placeOrderBtn" class="mt-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Place Order</button>
+        </div>
+
+        <!-- User Profile Page -->
+        <div id="profilePage" class="hidden">
+            <h2 class="text-2xl font-bold mb-4">User Profile</h2>
+            <div id="userProfile" class="bg-white p-6 rounded shadow"></div>
+            <h3 class="text-xl font-bold mt-6 mb-2">Past Orders</h3>
+            <div id="pastOrders" class="bg-white p-6 rounded shadow"></div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="adminPanel" class="hidden">
+            <h2 class="text-2xl font-bold mb-4">Admin Panel</h2>
+            <h3 class="text-xl font-bold mb-2">Users</h3>
+            <div id="adminUsers" class="bg-white p-6 rounded shadow mb-6">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="border p-2">User ID</th>
+                            <th class="border p-2">Email</th>
+                            <th class="border p-2">Role</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable"></tbody>
+                </table>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Sold Products</h3>
+            <div id="adminOrders" class="bg-white p-6 rounded shadow">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="border p-2">Order ID</th>
+                            <th class="border p-2">User ID</th>
+                            <th class="border p-2">Product</th>
+                            <th class="border p-2">Category</th>
+                            <th class="border p-2">Quantity</th>
+                            <th class="border p-2">Order Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
