@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechBay - Create Product</title>
+  <link rel="stylesheet" href="css/create-product.css">
+  <link rel="stylesheet" href="css/phone-modal.css">
+  <link rel="stylesheet" href="css/tablet-modal.css">
+  <link rel="stylesheet" href="css/television-modal.css">
+  <link rel="stylesheet" href="css/pc-modal.css">
+  <link rel="stylesheet" href="css/laptop-modal.css">
+  <link rel="stylesheet" href="css/headphone-modal.css">
+  <link rel="stylesheet" href="css/pcscreen-modal.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="title">TechBay</a>
+      <div>
+        <a href="admin.html" class="admin-link">Admin Panel</a>
+        <a href="https://us-east-1jscbx6oxu.auth.us-east-1.amazoncognito.com/login?client_id=5ire06u3j2dj3pnv6c2rlltbum&redirect_uri=https%3A%2F%2Fd84l1y8p4kdic.cloudfront.net&response_type=code&scope=email+openid+phone" class="login-btn">Log In</a>
+      </div>
+    </div>
+  </header>
+  <main class="container">
+    <h2>Create New Product</h2>
+    <div class="product-grid">
+      <div class="product-card" data-type="phone">Add New Phone</div>
+      <div class="product-card" data-type="tablet">Add New Tablet</div>
+      <div class="product-card" data-type="television">Add New Television</div>
+      <div class="product-card" data-type="pc">Add New PC</div>
+      <div class="product-card" data-type="laptop">Add New Laptop</div>
+      <div class="product-card" data-type="headphone">Add New Headphone</div>
+      <div class="product-card" data-type="pcscreen">Add New PC Screen</div>
+    </div>
+    <div id="phone-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Add New Phone</h2>
+        <div id="phone-error" class="error"></div>
+        <form id="phone-form">
+          <div>
+            <label>Brand:</label>
+            <input type="text" name="brand" required>
+          </div>
+          <div>
+            <label>Model Name:</label>
+            <input type="text" name="modelName" required>
+          </div>
+          <div>
+            <label>Memory Storage (GB):</label>
+            <input type="number" name="memoryStorageCapacity" required>
+          </div>
+          <div>
+            <label>RAM (GB):</label>
+            <input type="number" name="ram" required>
+          </div>
+          <div>
+            <label>Resolution (e.g., 1920x1080):</label>
+            <input type="text" name="displayResolutionMaximum" required>
+          </div>
+          <div>
+            <label>Color:</label>
+            <input type="text" name="color">
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea name="description"></textarea>
+          </div>
+          <div>
+            <label>Price ($):</label>
+            <input type="number" step="0.01" name="price" required>
+          </div>
+          <div>
+            <label>Image:</label>
+            <input type="file" accept="image/jpeg,image/png,image/gif" name="imageFile" required>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" class="cancel-btn" data-modal="phone">Cancel</button>
+            <button type="submit" class="submit-btn">Add Phone</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="tablet-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Add New Tablet</h2>
+        <div id="tablet-error" class="error"></div>
+        <form id="tablet-form">
+          <div>
+            <label>Brand:</label>
+            <input type="text" name="brand" required>
+          </div>
+          <div>
+            <label>Model Name:</label>
+            <input type="text" name="modelName" required>
+          </div>
+          <div>
+            <label>Memory Storage (GB):</label>
+            <input type="number" name="memoryStorageCapacity" required>
+          </div>
+          <div>
+            <label>RAM (GB):</label>
+            <input type="number" name="ram" required>
+          </div>
+          <div>
+            <label>Resolution (e.g., 1920x1080):</label>
+            <input type="text" name="displayResolutionMaximum" required>
+          </div>
+          <div>
+            <label>Color:</label>
+            <input type="text" name="color">
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea name="description"></textarea>
+          </div>
+          <div>
+            <label>Price ($):</label>
+            <input type="number" step="0.01" name="price" required>
+          </div>
+          <div>
+            <label>Image:</label>
+            <input type="file" accept="image/jpeg,image/png,image/gif" name="imageFile" required>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" class="cancel-btn" data-modal="tablet">Cancel</button>
+            <button type="submit" class="submit-btn">Add Tablet</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="television-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Add New Television</h2>
+        <div id="television-error" class="error"></div>
+        <form id="television-form">
+          <div>
+            <label>Brand:</label>
+            <input type="text" name="brand" required>
+          </div>
+          <div>
+            <label>Size (inches):</label>
+            <input type="number" name="size" required>
+          </div>
+          <div>
+            <label>Refresh Rate (Hz):</label>
+            <input type="number" name="hz" required>
+          </div>
+          <div>
+            <label>Resolution (e.g., 1920x1080):</label>
+            <input type="text" name="resolution" required>
+          </div>
+          <div>
+            <label>Aspect Ratio (e.g., 16:9):</label>
+            <input type="text" name="aspectRatio" required>
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea name="description"></textarea>
+          </div>
+          <div>
+            <label>Price ($):</label>
+            <input type="number" step="0.01" name="price" required>
+          </div>
+          <div>
+            <label>Image:</label>
+            <input type="file" accept="image/jpeg,image/png,image/gif" name="imageFile" required>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" class="cancel-btn" data-modal="television">Cancel</button>
+            <button type="submit" class="submit-btn">Add Television</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="pc-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Add New PC</h2>
+        <div id="pc-error" class="error"></div>
+        <form id="pc-form">
+          <div>
+            <label>Brand:</label>
+            <input type="text" name="brand" required>
+          </div>
+          <div>
+            <label>Motherboard Compatibility:</label>
+            <input type="text" name="motherboardCompatibility" required>
+          </div>
+          <div>
+            <label>Recommended Uses:</label>
+            <input type="text" name="recommendedUses">
+          </div>
+          <div>
+            <label>Color:</label>
+            <input type="text" name="color">
+          </div>
+          <div>
+            <label>Memory Size (GB):</label>
+            <input type="number" name="memorySize" required>
+          </div>
+          <div>
+            <label>SSD (GB):</label>
+            <input type="number" name="ssd" required>
+          </div>
+          <div>
+            <label>Graphics Card:</label>
+            <input type="text" name="graphicsCard" required>
+          </div>
+          <div>
+            <label>Processor:</label>
+            <input type="text" name="processor" required>
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea name="description"></textarea>
+          </div>
+          <div>
+            <label>Price ($):</label>
+            <input type="number" step="0.01" name="price" required>
+          </div>
+          <div>
+            <label>Image:</label>
+            <input type="file" accept="image/jpeg,image/png,image/gif" name="imageFile" required>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" class="cancel-btn" data-modal="pc">Cancel</button>
+            <button type="submit" class="submit-btn">Add PC</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="laptop-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Add New Laptop</h2>
+        <div id="laptop-error" class="error"></div>
+        <form id="laptop-form">
+          <div>
+            <label>Brand:</label>
+            <input type="text" name="brand" required>
+          </div>
+          <div>
+            <label>Motherboard Compatibility:</label>
+            <input type="text" name="motherboardCompatibility" required>
+          </div>
+          <div>
+            <label>Recommended Uses:</label>
+            <input type="text" name="recommendedUses">
+          </div>
+          <div>
+            <label>Color:</label>
+            <input type="text" name="color">
+          </div>
+          <div>
+            <label>Memory Size (GB):</label>
+            <input type="number" name="memorySize" required>
+          </div>
+          <div>
+            <label>SSD (GB):</label>
+            <input type="number" name="ssd" required>
+          </div>
+          <div>
+            <label>Graphics Card:</label>
+            <input type="text" name="graphicsCard" required>
+          </div>
+          <div>
+            <label>Processor:</label>
+            <input type="text" name="processor" required>
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea name="description"></textarea>
+          </div>
+          <div>
+            <label>Price ($):</label>
+            <input type="number" step="0.01" name="price" required>
+          </div>
+          <div>
+            <label>Image:</label>
+            <input type="file" accept="image/jpeg,image/png,image/gif" name="imageFile" required>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" class="cancel-btn" data-modal="laptop">Cancel</button>
+            <button type="submit" class="submit-btn">Add Laptop</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="headphone-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Add New Headphone</h2>
+        <div id="headphone-error" class="error"></div>
+        <form id="headphone-form">
+          <div>
+            <label>Brand:</label>
+            <input type="text" name="brand" required>
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea name="description"></textarea>
+          </div>
+          <div>
+            <label>Price ($):</label>
+            <input type="number" step="0.01" name="price" required>
+          </div>
+          <div>
+            <label>Image:</label>
+            <input type="file" accept="image/jpeg,image/png,image/gif" name="imageFile" required>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" class="cancel-btn" data-modal="headphone">Cancel</button>
+            <button type="submit" class="submit-btn">Add Headphone</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="pcscreen-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Add New PC Screen</h2>
+        <div id="pcscreen-error" class="error"></div>
+        <form id="pcscreen-form">
+          <div>
+            <label>Company:</label>
+            <input type="text" name="company" required>
+          </div>
+          <div>
+            <label>Size (inches):</label>
+            <input type="number" name="size" required>
+          </div>
+          <div>
+            <label>Refresh Rate (Hz):</label>
+            <input type="number" name="hz" required>
+          </div>
+          <div>
+            <label>Resolution (e.g., 1920x1080):</label>
+            <input type="text" name="resolution" required>
+          </div>
+          <div>
+            <label>Aspect Ratio (e.g., 16:9):</label>
+            <input type="text" name="aspectRatio" required>
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea name="description"></textarea>
+          </div>
+          <div>
+            <label>Price ($):</label>
+            <input type="number" step="0.01" name="price" required>
+          </div>
+          <div>
+            <label>Image:</label>
+            <input type="file" accept="image/jpeg,image/png,image/gif" name="imageFile" required>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" class="cancel-btn" data-modal="pcscreen">Cancel</button>
+            <button type="submit" class="submit-btn">Add PC Screen</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="js/create-product.js"></script>
+</body>
+</html>

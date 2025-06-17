@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechBay - Admin Panel</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/delete-modal.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="title">TechBay</a>
+      <div>
+        <a href="admin.html" class="admin-link">Admin Panel</a>
+        <a href="https://us-east-1jscbx6oxu.auth.us-east-1.amazoncognito.com/login?client_id=5ire06u3j2dj3pnv6c2rlltbum&redirect_uri=https%3A%2F%2Fd84l1y8p4kdic.cloudfront.net&response_type=code&scope=email+openid+phone" class="login-btn">Log In</a>
+      </div>
+    </div>
+  </header>
+  <main class="container">
+    <div class="admin-header">
+      <h2>Admin Panel - Products</h2>
+      <a href="create-product.html" class="create-btn">Create New Product</a>
+    </div>
+    <div id="loading" class="loading">Loading products...</div>
+    <div class="table-container">
+      <table id="product-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="product-table-body"></tbody>
+      </table>
+    </div>
+    <div id="delete-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Confirm Deletion</h2>
+        <p>Are you sure you want to delete this product? This action cannot be undone.</p>
+        <div class="modal-buttons">
+          <button id="cancel-delete" class="cancel-btn">Cancel</button>
+          <button id="confirm-delete" class="delete-btn">Delete</button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>
