@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechBay - Admin Panel</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="title">TechBay</a>
+      <div data-user-info></div>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+  </header>
+  <main class="container">
+    <div id="loading" class="loading">Checking access...</div>
+    <div id="admin-content" style="display:none;">
+      <div class="admin-header">
+        <h2>Admin Panel - Products</h2>
+        <a href="create-product.html" class="create-btn">Create New Product</a>
+      </div>
+      <div class="table-container">
+        <table id="product-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Model</th>
+              <th>Price</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="product-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // Initialize page with admin protection
+    window.addEventListener('load', async () => {
+      const hasAccess = await protectPage({ requireAdmin: true });
+      
+      if (hasAccess) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('admin-content').style.display = 'block';
+        updateUserInfo();
+        
+        // Load admin-specific content
+        if (typeof loadAdminData === 'function') {
+          loadAdminData();
+        }
+      }
+    });
+  </script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
