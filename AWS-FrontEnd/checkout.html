@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechBay - Checkout</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/checkout.css">
+</head>
+<body>
+  <header class="header-section">
+    <div class="container">
+      <a href="index.html" class="title">TechBay</a>
+      <div id="auth-section" class="header-actions">
+        <a href="https://us-east-1jscbx6oxu.auth.us-east-1.amazoncognito.com/login?client_id=5ire06u3j2dj3pnv6c2rlltbum&redirect_uri=https%3A%2F%2Ftechbay-static-958228573368-dev.s3.us-east-1.amazonaws.com%2Findex.html&response_type=code&scope=email+openid+phone" 
+           id="login-link" 
+           class="login-btn">Log In</a>
+      </div>
+      <a href="cart.html" class="cart-btn">Cart (0)</a>
+    </div>
+  </header>
+
+  <main class="container checkout-container">
+    <div class="checkout-header">
+      <h1>Checkout</h1>
+      <p>Review your order before payment</p>
+    </div>
+
+    <div id="checkout-items" class="checkout-items-container"></div>
+
+    <div class="checkout-summary">
+      <div id="checkout-total" class="checkout-total"></div>
+      <button id="payment-btn" class="payment-btn">Proceed to Payment</button>
+    </div>
+  </main>
+
+  <script type="module" src="js/auth.js"></script>
+  <script type="module">
+    import { login, getUserGroups, isAuthenticated, handleRedirect, logout, isAdmin } from './js/auth.js';
+    import config from './js/config.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const authSection = document.getElementById('auth-section');
+      const loginLink = document.getElementById('login-link');
+
+      await handleRedirect();
+
+      const authenticated = isAuthenticated();
+      if (authenticated) {
+        // Hide the login link
+        loginLink.style.display = 'none';
+        
+        const isUserAdmin = await isAdmin();
+        if (isUserAdmin) {
+          // Create admin link if user is admin
+          const adminLink = document.createElement('a');
+          adminLink.href = 'admin.html';
+          adminLink.className = 'admin-link';
+          adminLink.textContent = 'Admin Panel';
+          authSection.insertBefore(adminLink, loginLink);
+        }
+
+        // Add logout link
+        const logoutLink = document.createElement('a');
+        logoutLink.href = '#';
+        logoutLink.id = 'logout-link';
+        logoutLink.className = 'login-btn';
+        logoutLink.textContent = 'Log Out';
+        authSection.appendChild(logoutLink);
+
+        logoutLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          logout();
+        });
+      } else {
+        // Show login link if not authenticated
+        loginLink.style.display = 'inline-block';
+      }
+    });
+  </script>
+  <script type="module" src="js/checkout.js"></script>
+</body>
+</html>
