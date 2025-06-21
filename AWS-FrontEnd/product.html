@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechBay - Product Details</title>
+  <link rel="stylesheet" href="css/product.css">
+</head>
+<body>
+  <header class="header-section">
+    <div class="container">
+      <a href="index.html" class="title">TechBay</a>
+      <div id="auth-section" class="header-actions">
+        <!-- Content will be dynamically added based on auth status -->
+      </div>
+      <a href="cart.html" class="cart-btn">Cart (0)</a>
+    </div>
+  </header>
+  <main class="container">
+    <div id="product-details" class="product-details"></div>
+    <div id="loading" class="loading">Loading...</div>
+  </main>
+  <script type="module" src="js/product.js"></script>
+  <script>
+    // Dynamically update auth section based on authentication status
+    window.addEventListener('load', async () => {
+      const authSection = document.getElementById('auth-section');
+      const authenticated = await checkAuth(); // Assuming checkAuth is defined in auth.js
+      
+      if (authenticated) {
+        updateUserInfo(); // Assuming updateUserInfo is defined in auth.js
+        
+        let authHTML = '';
+        if (currentUser.isAdmin) {
+          authHTML += '<a href="admin.html" class="admin-link">Admin Panel</a> ';
+        }
+        authHTML += '<span data-user-info></span> ';
+        authHTML += '<a href="#" onclick="logout(); return false;" class="login-btn">Log Out</a>';
+        
+        authSection.innerHTML = authHTML;
+        updateUserInfo(); // Update the user info span
+      } else {
+        authSection.innerHTML = '<a href="#" onclick="login(); return false;" class="login-btn">Log In</a>';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechBay - Payment</title>
+  <link rel="stylesheet" href="css/payment.css">
+</head>
+<body>
+  <header class="header-section">
+    <div class="container">
+      <a href="index.html" class="title">TechBay</a>
+      <div id="auth-section" class="header-actions"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="payment-section">
+      <h2>Payment Details</h2>
+      <div id="payment-items"></div>
+      <div id="payment-total"></div>
+
+      <form id="payment-form">
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" placeholder="Your Name" required>
+
+          <label for="email">Email</label>
+          <input type="email" name="email" id="email" placeholder="Your Email" required>
+
+          <label for="address">Shipping Address</label>
+          <textarea name="address" id="address" placeholder="Shipping Address" rows="3" required></textarea>
+        </div>
+        <button type="submit" id="pay-now-btn" class="submit-btn" disabled>Pay Now</button>
+      </form>
+
+      <div id="payment-result" class="result"></div>
+    </section>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Processing your payment...</p>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script type="module" src="js/payment.js"></script>
+</body>
+</html>
