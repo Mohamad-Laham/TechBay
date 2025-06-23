@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Orders</title>
+  <link rel="stylesheet" href="css/order.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="title">TechBay</a>
+      <a href="admin.html" class="admin-link">Admin Panel</a>
+    </div>
+  </header>
+  <main class="container">
+    <div class="admin-header">
+      <h2>Admin Orders</h2>
+    </div>
+    <div id="auth-section"></div>
+    <div id="loading">Loading orders...</div>
+    <div class="table-container">
+      <table id="order-table">
+        <thead>
+          <tr>
+            <th>Order Date</th>
+            <th>Brand & Quantity</th> <!-- Updated to reflect combined data -->
+            <th>Email</th>
+            <th>Address</th>
+            <th>Total Price</th>
+          </tr>
+        </thead>
+        <tbody id="order-table-body"></tbody>
+      </table>
+    </div>
+    <div id="error" class="error" style="display:none;"></div>
+  </main>
+  <script type="module" src="./js/order.js"></script>
+</body>
+</html>
