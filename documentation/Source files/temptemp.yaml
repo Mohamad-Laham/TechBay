@@ -1,0 +1,3161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to set up an S3 bucket for hosting TechBay
+  frontend code, a Cognito User Pool for authentication, an API Gateway with
+  Lambda functions for cart, orders, and products operations, and DynamoDB
+  tables using a single Lambda execution role.
+
+Resources:
+  # S3 Bucket for Frontend Hosting
+  TechBayFrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-techbay-frontend-${AWS::Region}-${AWS::AccountId}
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3000
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+    DeletionPolicy: Retain
+
+  # S3 Bucket Policy for Public Access
+  TechBayFrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref TechBayFrontendBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${TechBayFrontendBucket}/*
+
+  # Cognito User Pool for Authentication
+  TechBayUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-techbay-user-pool
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+          RequireLowercase: true
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+
+  # Cognito User Pool Domain
+  TechBayUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub ${AWS::StackName}-techbay
+      UserPoolId: !Ref TechBayUserPool
+
+  # Cognito User Pool Client for Frontend App
+  TechBayUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AWS::StackName}-techbay-user-pool-client
+      UserPoolId: !Ref TechBayUserPool
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      CallbackURLs:
+        - !Sub https://${TechBayFrontendBucket}.s3-website-${AWS::Region}.amazonaws.com/index.html
+      LogoutURLs:
+        - !Sub https://${TechBayFrontendBucket}.s3-website-${AWS::Region}.amazonaws.com/index.html
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - email
+        - openid
+      SupportedIdentityProviders:
+        - COGNITO
+
+  # API Gateway REST API
+  TechBayApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: TechBayAPI-dev
+      Description: TechBay REST API
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # /api Resource
+  ApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !GetAtt TechBayApiGateway.RootResourceId
+      PathPart: api
+
+  # /api/cart Resource
+  CartResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ApiResource
+      PathPart: cart
+
+  # /api/orders Resource
+  OrdersResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ApiResource
+      PathPart: orders
+
+  # /api/products Resource
+  ProductsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ApiResource
+      PathPart: products
+
+  # /api/products/{productId} Resource
+  ProductIdResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ProductsResource
+      PathPart: '{productId}'
+
+  # Product Category Resources
+  HeadphoneResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ProductsResource
+      PathPart: headphone
+
+  LaptopResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ProductsResource
+      PathPart: laptop
+
+  PCResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ProductsResource
+      PathPart: pc
+
+  PCScreenResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ProductsResource
+      PathPart: pcscreen
+
+  PhoneResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ProductsResource
+      PathPart: phone
+
+  TabletResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ProductsResource
+      PathPart: tablet
+
+  TelevisionResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ParentId: !Ref ProductsResource
+      PathPart: television
+
+  # Cognito Authorizer for API Gateway
+  TechBayApiAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: TechBayCognitoAuth
+      RestApiId: !Ref TechBayApiGateway
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      ProviderARNs:
+        - !GetAtt TechBayUserPool.Arn
+
+  # DynamoDB Table for Cart
+  TechBayCartTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TechBayCart-dev
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: productId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: productId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  # DynamoDB Table for Orders
+  TechBayOrdersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TechBayOrders-dev
+      AttributeDefinitions:
+        - AttributeName: orderId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: orderId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: userId-index
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # DynamoDB Table for PC Products
+  TechBayPCTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TechBayPC
+      AttributeDefinitions:
+        - AttributeName: pcId
+          AttributeType: S
+        - AttributeName: brand
+          AttributeType: S
+        - AttributeName: modelName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pcId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: BrandModelIndex
+        KeySchema:
+          - AttributeName: brand
+            KeyType: HASH
+          - AttributeName: modelName
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # DynamoDB Table for Televisions
+  TVTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TV_TABLE
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+        - AttributeName: brand
+          AttributeType: S
+        - AttributeName: modelName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: BrandModelIndex
+        KeySchema:
+          - AttributeName: brand
+            KeyType: HASH
+          - AttributeName: modelName
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # DynamoDB Table for PC Screens
+  PCScreensTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PC_SCREENS_TABLE
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+        - AttributeName: brand
+          AttributeType: S
+        - AttributeName: modelName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: BrandModelIndex
+        KeySchema:
+          - AttributeName: brand
+            KeyType: HASH
+          - AttributeName: modelName
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # DynamoDB Table for Laptops
+  LaptopTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: LAPTOP_TABLE
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+        - AttributeName: brand
+          AttributeType: S
+        - AttributeName: modelName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: BrandModelIndex
+        KeySchema:
+          - AttributeName: brand
+            KeyType: HASH
+          - AttributeName: modelName
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # DynamoDB Table for Tablets
+  TabletTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TABLET_TABLE
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+        - AttributeName: brand
+          AttributeType: S
+        - AttributeName: modelName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: BrandModelIndex
+        KeySchema:
+          - AttributeName: brand
+            KeyType: HASH
+          - AttributeName: modelName
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # DynamoDB Table for Phones
+  PhoneTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PHONE_TABLE
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+        - AttributeName: brand
+          AttributeType: S
+        - AttributeName: modelName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: BrandModelIndex
+        KeySchema:
+          - AttributeName: brand
+            KeyType: HASH
+          - AttributeName: modelName
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # DynamoDB Table for Headphones
+  HeadphoneTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: HEADPHONE_TABLE
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+        - AttributeName: brand
+          AttributeType: S
+        - AttributeName: modelName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: BrandModelIndex
+        KeySchema:
+          - AttributeName: brand
+            KeyType: HASH
+          - AttributeName: modelName
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # Lambda Function for DELETE /api/cart (removeProductFromCart)
+  RemoveProductFromCartLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-removeProductFromCart
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+          import { DynamoDBDocumentClient, DeleteCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          const base64urlDecode = (str) => {
+              str += new Array(5 - str.length % 4).join('=');
+              str = str.replace(/-/g, '+').replace(/_/g, '/');
+              return Buffer.from(str, 'base64').toString('utf8');
+          };
+
+          const verifyToken = async (token) => {
+              try {
+                  const actualToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+                  const parts = actualToken.split('.');
+                  if (parts.length !== 3) throw new Error('Invalid JWT format');
+                  const payload = JSON.parse(base64urlDecode(parts[1]));
+                  if (!payload.sub || !payload.exp) throw new Error('Invalid token payload');
+                  if (Math.floor(Date.now() / 1000) > payload.exp) throw new Error('Token expired');
+                  return { isValid: true, userId: payload.sub };
+              } catch (error) {
+                  return { isValid: false, error: error.message };
+              }
+          };
+
+          export const handler = async (event) => {
+              const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'DELETE,OPTIONS' };
+              const authHeader = event.headers?.Authorization || event.headers?.authorization;
+              if (!authHeader) return { statusCode: 401, headers, body: JSON.stringify({ message: "Authorization header missing" }) };
+              const tokenVerification = await verifyToken(authHeader);
+              if (!tokenVerification.isValid) return { statusCode: 401, headers, body: JSON.stringify({ message: "Invalid token", error: tokenVerification.error }) };
+              let body; try { body = event.body ? JSON.parse(event.body) : {}; } catch (err) { return { statusCode: 400, headers, body: JSON.stringify({ message: "Invalid body", error: err.message }) }; }
+              const { productId } = body; if (!productId) return { statusCode: 400, headers, body: JSON.stringify({ message: "Missing productId" }) };
+              const userId = tokenVerification.userId; const tableName = process.env.CART_TABLE;
+              try { const getParams = { TableName: tableName, Key: { userId, productId } }; const existingItem = await dynamo.send(new GetCommand(getParams));
+                  if (!existingItem.Item) return { statusCode: 404, headers, body: JSON.stringify({ message: "Item not found" }) };
+                  const deleteParams = { TableName: tableName, Key: { userId, productId }, ReturnValues: 'ALL_OLD' };
+                  const result = await dynamo.send(new DeleteCommand(deleteParams));
+                  return { statusCode: 200, headers, body: JSON.stringify({ message: "Item removed", removedItem: result.Attributes }) };
+              } catch (err) { return { statusCode: 500, headers, body: JSON.stringify({ message: "Failed to remove item", error: err.message }) }; }
+          };
+      Environment:
+        Variables:
+          CART_TABLE: !Ref TechBayCartTable
+      Timeout: 10
+
+  # Lambda Function for GET /api/cart (getProductsFromCart)
+  GetProductsFromCartLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-getProductsFromCart
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+          import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          const base64urlDecode = (str) => {
+              str += new Array(5 - str.length % 4).join('=');
+              str = str.replace(/-/g, '+').replace(/_/g, '/');
+              return Buffer.from(str, 'base64').toString('utf8');
+          };
+
+          const verifyToken = async (token) => {
+              try {
+                  const actualToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+                  const parts = actualToken.split('.');
+                  if (parts.length !== 3) throw new Error('Invalid JWT format');
+                  const payload = JSON.parse(base64urlDecode(parts[1]));
+                  if (!payload.sub || !payload.exp) throw new Error('Invalid token payload');
+                  if (Math.floor(Date.now() / 1000) > payload.exp) throw new Error('Token expired');
+                  return { isValid: true, userId: payload.sub };
+              } catch (error) {
+                  return { isValid: false, error: error.message };
+              }
+          };
+
+          export const handler = async (event) => {
+              const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'GET,OPTIONS' };
+              const authHeader = event.headers?.Authorization || event.headers?.authorization;
+              if (!authHeader) return { statusCode: 401, headers, body: JSON.stringify({ message: "Authorization header missing" }) };
+              const tokenVerification = await verifyToken(authHeader);
+              if (!tokenVerification.isValid) return { statusCode: 401, headers, body: JSON.stringify({ message: "Invalid token", error: tokenVerification.error }) };
+              const userId = tokenVerification.userId;
+              try { const scanParams = { TableName: process.env.CART_TABLE, FilterExpression: 'userId = :userId', ExpressionAttributeValues: { ':userId': userId } };
+                  const { Items } = await dynamo.send(new ScanCommand(scanParams));
+                  return { statusCode: 200, headers, body: JSON.stringify({ items: Items || [] }) };
+              } catch (err) { return { statusCode: 500, headers, body: JSON.stringify({ message: "Failed to fetch items", error: err.message }) }; }
+          };
+      Environment:
+        Variables:
+          CART_TABLE: !Ref TechBayCartTable
+      Timeout: 10
+
+  # Lambda Function for POST /api/cart (addToCart)
+  AddToCartLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-addToCart
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          const base64urlDecode = (str) => {
+              str += new Array(5 - str.length % 4).join('=');
+              str = str.replace(/-/g, '+').replace(/_/g, '/');
+              return Buffer.from(str, 'base64').toString('utf8');
+          };
+
+          const verifyToken = async (token) => {
+              try {
+                  const actualToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+                  const parts = actualToken.split('.');
+                  if (parts.length !== 3) throw new Error('Invalid JWT format');
+                  const payload = JSON.parse(base64urlDecode(parts[1]));
+                  if (!payload.sub || !payload.exp) throw new Error('Invalid token payload');
+                  if (Math.floor(Date.now() / 1000) > payload.exp) throw new Error('Token expired');
+                  return { isValid: true, userId: payload.sub };
+              } catch (error) {
+                  return { isValid: false, error: error.message };
+              }
+          };
+
+          exports.handler = async (event) => {
+              const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'POST,OPTIONS' };
+              const authHeader = event.headers?.Authorization || event.headers?.authorization;
+              if (!authHeader) return { statusCode: 401, headers, body: JSON.stringify({ message: "Authorization header missing" }) };
+              const tokenVerification = await verifyToken(authHeader);
+              if (!tokenVerification.isValid) return { statusCode: 401, headers, body: JSON.stringify({ message: "Invalid token", error: tokenVerification.error }) };
+              let body; try { body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body; } catch (err) { return { statusCode: 400, headers, body: JSON.stringify({ message: "Invalid body" }) }; }
+              const { productId, quantity, category } = body; if (!productId || !quantity || !category) return { statusCode: 400, headers, body: JSON.stringify({ message: "Missing fields" }) };
+              const userId = tokenVerification.userId;
+              try { const getParams = { TableName: process.env.CART_TABLE, Key: { userId, productId } }; const existingItem = await dynamo.send(new GetCommand(getParams));
+                  if (existingItem.Item) { const updateParams = { TableName: process.env.CART_TABLE, Key: { userId, productId }, UpdateExpression: 'SET quantity = if_not_exists(quantity, :qty) + :incQty, updatedAt = :updatedAt', ExpressionAttributeValues: { ':qty': existingItem.Item.quantity || 0, ':incQty': quantity, ':updatedAt': new Date().toISOString() }, ReturnValues: 'ALL_NEW' };
+                      const result = await dynamo.send(new UpdateCommand(updateParams)); return { statusCode: 200, headers, body: JSON.stringify({ message: "Updated", item: result.Attributes }) }; }
+                  else { const putParams = { TableName: process.env.CART_TABLE, Item: { userId, productId, quantity, category, productName: `Product ${productId}`, price: 0, addedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } };
+                      await dynamo.send(new PutCommand(putParams)); return { statusCode: 201, headers, body: JSON.stringify({ message: "Added", item: putParams.Item }) }; }
+              } catch (err) { return { statusCode: 500, headers, body: JSON.stringify({ message: "Failed", error: err.message }) }; }
+          };
+      Environment:
+        Variables:
+          CART_TABLE: !Ref TechBayCartTable
+      Timeout: 10
+
+  # Lambda Function for GET /api/orders (getPurchasesOrders)
+  GetPurchasesOrdersLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-getPurchasesOrders
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+          import { DynamoDBDocumentClient, ScanCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          const base64urlDecode = (str) => {
+              str += new Array(5 - str.length % 4).join('=');
+              str = str.replace(/-/g, '+').replace(/_/g, '/');
+              return Buffer.from(str, 'base64').toString('utf8');
+          };
+
+          const verifyToken = async (token) => {
+              try {
+                  const actualToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+                  const parts = actualToken.split('.');
+                  if (parts.length !== 3) throw new Error('Invalid JWT format');
+                  const payload = JSON.parse(base64urlDecode(parts[1]));
+                  if (!payload.sub || !payload.exp) throw new Error('Invalid token payload');
+                  if (Math.floor(Date.now() / 1000) > payload.exp) throw new Error('Token expired');
+                  return { isValid: true, userId: payload.sub, groups: payload['cognito:groups'] || [] };
+              } catch (error) {
+                  return { isValid: false, error: error.message };
+              }
+          };
+
+          const formatDate = (dateValue) => {
+              if (!dateValue) return null;
+              const parsedDate = new Date(dateValue);
+              return isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString();
+          };
+
+          export const handler = async (event) => {
+              const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'GET,OPTIONS' };
+              if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: JSON.stringify({}) };
+              let authHeader = event.headers?.Authorization || event.headers?.authorization || Object.entries(event.headers || {}).find(([k]) => k.toLowerCase() === 'authorization')?.[1];
+              if (!authHeader && event.requestContext?.authorizer?.claims?.sub) authHeader = `Bearer ${event.requestContext.authorizer.claims.sub}`;
+              if (!authHeader) return { statusCode: 401, headers, body: JSON.stringify({ message: "Authorization header missing" }) };
+              const tokenVerification = await verifyToken(authHeader);
+              if (!tokenVerification.isValid) return { statusCode: 401, headers, body: JSON.stringify({ message: "Invalid token", error: tokenVerification.error }) };
+              const isAdmin = tokenVerification.groups.includes('admins'); const userId = tokenVerification.userId;
+              try { let orders = [], lastEvaluatedKey = null; const tableName = process.env.ORDERS_TABLE;
+                  if (isAdmin) { let scanParams = { TableName: tableName, Limit: 100 }; do { const result = await dynamo.send(new ScanCommand(scanParams)); orders = orders.concat(result.Items || []); lastEvaluatedKey = result.LastEvaluatedKey; scanParams.ExclusiveStartKey = lastEvaluatedKey; } while (lastEvaluatedKey); }
+                  else { let queryParams = { TableName: tableName, IndexName: 'userId-index', KeyConditionExpression: 'userId = :userId', ExpressionAttributeValues: { ':userId': userId }, Limit: 100 }; do { const result = await dynamo.send(new QueryCommand(queryParams)); orders = orders.concat(result.Items || []); lastEvaluatedKey = result.LastEvaluatedKey; queryParams.ExclusiveStartKey = lastEvaluatedKey; } while (lastEvaluatedKey); }
+                  const formattedOrders = orders.map(order => ({ orderId: order.orderId || 'N/A', createdAt: formatDate(order.createdAt), totalPrice: order.totalPrice || 0, email: order.email || 'N/A', address: order.address || 'N/A', products: (order.products || []).map(p => ({ productId: p.productId || 'N/A', quantity: p.quantity || 0, brand: p.brand || 'N/A' })) }));
+                  return { statusCode: 200, headers, body: JSON.stringify({ orders: formattedOrders, isAdmin, userInfo: { userId, username: 'N/A', email: 'N/A' }, lastEvaluatedKey: lastEvaluatedKey ? JSON.stringify(lastEvaluatedKey) : null }) };
+              } catch (err) { return { statusCode: 500, headers, body: JSON.stringify({ message: "Failed to fetch orders", error: err.message }) }; }
+          };
+      Environment:
+        Variables:
+          ORDERS_TABLE: !Ref TechBayOrdersTable
+      Timeout: 15
+
+  # Lambda Function for POST /api/orders (purchasingProducts)
+  PurchasingProductsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-purchasingProducts
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
+          const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
+          const { SSMClient, GetParameterCommand } = require('@aws-sdk/client-ssm');
+
+          const dynamoClient = new DynamoDBClient({}); const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+          const snsClient = new SNSClient({}); const ssmClient = new SSMClient({});
+
+          const base64urlDecode = (str) => { str += new Array(5 - str.length % 4).join('='); str = str.replace(/-/g, '+').replace(/_/g, '/'); return Buffer.from(str, 'base64').toString('utf8'); };
+
+          const verifyToken = async (token) => { try { const actualToken = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim(); const parts = actualToken.split('.'); if (parts.length !== 3) throw new Error('Invalid JWT'); const payload = JSON.parse(base64urlDecode(parts[1])); if (!payload.sub || !payload.exp) throw new Error('Invalid payload'); if (Math.floor(Date.now() / 1000) > payload.exp) throw new Error('Token expired'); return { isValid: true, userId: payload.sub }; } catch (error) { return { isValid: false, error: error.message }; } };
+
+          const getSNSTopicArn = async () => { try { const response = await ssmClient.send(new GetParameterCommand({ Name: '/techbay/config' })); return JSON.parse(response.Parameter.Value).snsTopicArn; } catch (error) { throw error; } };
+
+          const sendOrderNotification = async (orderData, snsTopicArn) => { try { const emailSubject = `? New TechBay Order - ${orderData.orderId}`; const totalItems = orderData.products.reduce((sum, p) => sum + p.quantity, 0); const emailMessage = `Order ID: ${orderData.orderId}\nCustomer ID: ${orderData.userId}\nOrder Date: ${new Date(orderData.createdAt).toLocaleString('en-US', { timeZone: 'UTC' })}\nTotal Amount: $${orderData.totalPrice.toFixed(2)}\nTotal Items: ${totalItems}\nEmail: ${orderData.email}\nDelivery To: ${orderData.address}\nProducts: ${orderData.products.map(p => `${p.brand} (ID: ${p.productId}, Qty: ${p.quantity})`).join('\n')}`; await snsClient.send(new PublishCommand({ TopicArn: snsTopicArn, Subject: emailSubject, Message: emailMessage })); } catch (error) { console.error('SNS error:', error); } };
+
+          exports.handler = async (event) => { const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'POST,OPTIONS' }; if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: JSON.stringify({}) }; let authHeader = event.headers?.Authorization || event.headers?.authorization || Object.entries(event.headers || {}).find(([k]) => k.toLowerCase() === 'authorization')?.[1]; if (!authHeader) return { statusCode: 401, headers, body: JSON.stringify({ message: "Missing header" }) }; const tokenVerification = await verifyToken(authHeader); if (!tokenVerification.isValid) return { statusCode: 401, headers, body: JSON.stringify({ message: "Invalid token", error: tokenVerification.error }) }; let body; try { body = event.body ? JSON.parse(event.body) : {}; } catch (err) { return { statusCode: 400, headers, body: JSON.stringify({ message: "Invalid JSON" }) }; } const { products, totalPrice, email, address } = body; if (!totalPrice || isNaN(totalPrice) || totalPrice < 0 || !email || !address || !products || !Array.isArray(products) || products.length === 0) return { statusCode: 400, headers, body: JSON.stringify({ message: "Invalid input" }) }; const productIds = new Set(); for (const item of products) if (!item.productId || typeof item.quantity !== 'number' || item.quantity <= 0 || !item.brand) return { statusCode: 400, headers, body: JSON.stringify({ message: "Invalid product" }) }; const userId = tokenVerification.userId; const orderId = `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`; const orderItem = { orderId, userId, products, totalPrice, email, address, createdAt: new Date().toISOString() }; try { await dynamo.send(new PutCommand({ TableName: process.env.ORDERS_TABLE, Item: orderItem })); try { const snsTopicArn = await getSNSTopicArn(); await sendOrderNotification(orderItem, snsTopicArn); } catch (snsError) { console.error('SNS failed:', snsError); } return { statusCode: 200, headers, body: JSON.stringify({ message: "Purchase simulated", order: orderItem }) }; } catch (err) { return { statusCode: 500, headers, body: JSON.stringify({ message: "Internal error", error: err.message }) }; } };
+      Environment:
+        Variables:
+          ORDERS_TABLE: !Ref TechBayOrdersTable
+      Timeout: 15
+
+  # Lambda Function for GET /api/products (TechBay-GetProducts-dev)
+  GetProductsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-getProducts
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          exports.handler = async (event) => {
+              const tableCategories = [
+                  { table: process.env.TECHBAY_PC_TABLE, category: 'PC' },
+                  { table: process.env.TV_TABLE, category: 'televisions' },
+                  { table: process.env.PC_SCREENS_TABLE, category: 'PC Screens' },
+                  { table: process.env.LAPTOP_TABLE, category: 'laptops' },
+                  { table: process.env.TABLET_TABLE, category: 'tablets' },
+                  { table: process.env.PHONE_TABLE, category: 'phones' },
+                  { table: process.env.HEADPHONE_TABLE, category: 'headphones' }
+              ];
+
+              try {
+                  const allItems = [];
+                  for (const { table, category } of tableCategories) {
+                      try {
+                          const result = await dynamo.send(new ScanCommand({ TableName: table, Limit: 100 }));
+                          if (result.Items) {
+                              allItems.push(...result.Items.map(item => ({ ...item, category, id: item.pcId || item.productId || item.id })));
+                          }
+                      } catch (error) {
+                          if (error.name !== 'ResourceNotFoundException') console.error(`Error scanning ${table}:`, error);
+                      }
+                  }
+
+                  return {
+                      statusCode: 200,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify(allItems)
+                  };
+              } catch (err) {
+                  console.error('Global error:', err);
+                  return {
+                      statusCode: 500,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({ message: "Failed to retrieve products", error: err.message, suggestion: "Check tables and permissions" })
+                  };
+              }
+          };
+      Environment:
+        Variables:
+          TECHBAY_PC_TABLE: !Ref TechBayPCTable
+          TV_TABLE: !Ref TVTable
+          PC_SCREENS_TABLE: !Ref PCScreensTable
+          LAPTOP_TABLE: !Ref LaptopTable
+          TABLET_TABLE: !Ref TabletTable
+          PHONE_TABLE: !Ref PhoneTable
+          HEADPHONE_TABLE: !Ref HeadphoneTable
+      Timeout: 15
+
+  # Lambda Function for GET /api/products/{productId} (TechBay-GetProductById-dev)
+  GetProductByIdLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-getProductById
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, GetCommand } = require('@aws-sdk/lib-dynamodb');
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          exports.handler = async (event) => {
+              const productId = event.pathParameters?.productId;
+              const category = event.queryStringParameters?.category;
+
+              const tables = {
+                  television: process.env.TV_TABLE,
+                  pcscreen: process.env.PC_SCREENS_TABLE,
+                  pc: process.env.TECHBAY_PC_TABLE,
+                  laptop: process.env.LAPTOP_TABLE,
+                  tablet: process.env.TABLET_TABLE,
+                  phone: process.env.PHONE_TABLE,
+                  headphone: process.env.HEADPHONE_TABLE
+              };
+
+              if (!productId || !category || !tables[category]) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                      body: JSON.stringify({ message: "Valid productId and category parameters required" })
+                  };
+              }
+
+              const params = {
+                  TableName: tables[category],
+                  Key: { productId }
+              };
+
+              try {
+                  const data = await dynamo.send(new GetCommand(params));
+                  if (!data.Item) {
+                      return {
+                          statusCode: 404,
+                          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                          body: JSON.stringify({ message: "Product not found" })
+                      };
+                  }
+                  return {
+                      statusCode: 200,
+                      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                      body: JSON.stringify({ ...data.Item, category })
+                  };
+              } catch (err) {
+                  return {
+                      statusCode: 500,
+                      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                      body: JSON.stringify({ message: "Failed to retrieve product", error: err.message })
+                  };
+              }
+          };
+      Environment:
+        Variables:
+          TECHBAY_PC_TABLE: !Ref TechBayPCTable
+          TV_TABLE: !Ref TVTable
+          PC_SCREENS_TABLE: !Ref PCScreensTable
+          LAPTOP_TABLE: !Ref LaptopTable
+          TABLET_TABLE: !Ref TabletTable
+          PHONE_TABLE: !Ref PhoneTable
+          HEADPHONE_TABLE: !Ref HeadphoneTable
+      Timeout: 10
+
+  # Lambda Function for DELETE /api/products/{productId} (TechBay-DeleteProduct-dev)
+  DeleteProductLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-deleteProduct
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, DeleteCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
+          const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+          const snsClient = new SNSClient({});
+
+          exports.handler = async (event) => {
+              const productId = event.pathParameters?.productId;
+
+              if (!productId) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                      body: JSON.stringify({ message: "Valid productId required" })
+                  };
+              }
+
+              const tables = [
+                  { name: process.env.PHONE_TABLE, category: 'phone' },
+                  { name: process.env.TABLET_TABLE, category: 'tablet' },
+                  { name: process.env.TV_TABLE, category: 'television' },
+                  { name: process.env.TECHBAY_PC_TABLE, category: 'pc' },
+                  { name: process.env.LAPTOP_TABLE, category: 'laptop' },
+                  { name: process.env.HEADPHONE_TABLE, category: 'headphone' },
+                  { name: process.env.PC_SCREENS_TABLE, category: 'pcscreen' }
+              ];
+
+              try {
+                  for (const table of tables) {
+                      const params = {
+                          TableName: table.name,
+                          Key: { productId }
+                      };
+
+                      const existing = await dynamo.send(new GetCommand(params));
+                      if (existing.Item) {
+                          await dynamo.send(new DeleteCommand(params));
+                          await snsClient.send(new PublishCommand({
+                              TopicArn: process.env.SNS_TOPIC,
+                              Message: `Product ${productId} deleted from ${table.category} category`
+                          }));
+
+                          return {
+                              statusCode: 200,
+                              headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                              body: JSON.stringify({ message: "Product deleted successfully", deletedProduct: existing.Item })
+                          };
+                      }
+                  }
+
+                  return {
+                      statusCode: 404,
+                      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                      body: JSON.stringify({ message: "Product not found" })
+                  };
+              } catch (err) {
+                  console.error('Error deleting product:', err);
+                  return {
+                      statusCode: 500,
+                      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                      body: JSON.stringify({ message: "Failed to delete product", error: err.message, stack: process.env.NODE_ENV === 'development' ? err.stack : undefined })
+                  };
+              }
+          };
+      Environment:
+        Variables:
+          TECHBAY_PC_TABLE: !Ref TechBayPCTable
+          TV_TABLE: !Ref TVTable
+          PC_SCREENS_TABLE: !Ref PCScreensTable
+          LAPTOP_TABLE: !Ref LaptopTable
+          TABLET_TABLE: !Ref TabletTable
+          PHONE_TABLE: !Ref PhoneTable
+          HEADPHONE_TABLE: !Ref HeadphoneTable
+          SNS_TOPIC: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:TechBayProductUpdates
+      Timeout: 15
+
+  # Lambda Function for POST /api/products/headphone (AddHeadphone)
+  AddHeadphoneLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-addHeadphone
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+          const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
+
+          function generateUUID() {
+              return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+              });
+          }
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+          const snsClient = new SNSClient({});
+
+          // List of valid categories
+          const VALID_CATEGORIES = [
+              'phones',
+              'tablets',
+              'televisions',
+              'headphones',
+              'PC Screens',
+              'PC',
+              'laptops'
+          ];
+
+          exports.handler = async (event) => {
+              let body;
+              try {
+                  body = JSON.parse(event.body);
+              } catch (err) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ message: "Invalid request body" })
+                  };
+              }
+
+              const { brand, modelName, description, price, imageUrl, category } = body;
+
+              if (!brand || !modelName || !price || !category) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Missing required fields: brand, modelName, price, category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate category
+              if (!VALID_CATEGORIES.includes(category)) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Invalid category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate imageUrl if provided
+              if (imageUrl && !isValidUrl(imageUrl)) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ message: "Invalid image URL format" })
+                  };
+              }
+
+              // Check for duplicate product
+              const checkParams = {
+                  TableName: process.env.HEADPHONE_TABLE,
+                  IndexName: 'BrandIndex',
+                  KeyConditionExpression: 'brand = :brand',
+                  ExpressionAttributeValues: { ':brand': brand }
+              };
+
+              try {
+                  const existing = await dynamo.send(new QueryCommand(checkParams));
+                  if (existing.Items?.some(item =>
+                      item.modelName === modelName &&
+                      item.description === description &&
+                      item.category === category
+                  )) {
+                      return {
+                          statusCode: 400,
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ message: "Product with this brand, model name and description already exists in this category" })
+                      };
+                  }
+
+                  const productId = generateUUID();
+
+                  // Prepare the item to be inserted
+                  const item = {
+                      productId,
+                      brand,
+                      modelName,
+                      description: description || '',
+                      price: parseFloat(price),
+                      category,
+                      createdAt: new Date().toISOString()
+                  };
+
+                  // Only add imageUrl if it's provided and not empty
+                  if (imageUrl && imageUrl.trim() !== '') {
+                      item.imageUrl = imageUrl.trim();
+                  }
+
+                  await dynamo.send(new PutCommand({
+                      TableName: process.env.HEADPHONE_TABLE,
+                      Item: item
+                  }));
+
+                  // Send SNS notification
+                  await snsClient.send(new PublishCommand({
+                      TopicArn: process.env.SNS_TOPIC,
+                      Message: `New product added: ${brand} ${modelName} (Category: ${category})`
+                  }));
+
+                  return {
+                      statusCode: 200,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Product added successfully",
+                          productId,
+                          brand,
+                          modelName,
+                          imageUrl: item.imageUrl || null,
+                          category
+                      })
+                  };
+              } catch (err) {
+                  console.error('Error adding product:', err);
+                  return {
+                      statusCode: 500,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Failed to add product",
+                          error: err.message
+                      })
+                  };
+              }
+          };
+
+          // Helper function to validate URL format
+          function isValidUrl(string) {
+              try {
+                  new URL(string);
+                  return true;
+              } catch (_) {
+                  return false;
+              }
+          }
+      Environment:
+        Variables:
+          HEADPHONE_TABLE: !Ref HeadphoneTable
+          SNS_TOPIC: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:TechBayProductUpdates
+      Timeout: 10
+
+  # Lambda Function for POST /api/products/laptop (AddLaptop)
+  AddLaptopLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-addLaptop
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+
+          function generateUUID() {
+              return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+              });
+          }
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          // List of valid categories
+          const VALID_CATEGORIES = [
+              'phones',
+              'tablets',
+              'televisions',
+              'headphones',
+              'PC Screens',
+              'PC',
+              'laptops'
+          ];
+
+          function isValidUrl(string) {
+              try {
+                  new URL(string);
+                  return true;
+              } catch (_) {
+                  return false;
+              }
+          }
+
+          exports.handler = async (event) => {
+              console.log('Lambda invoked with event:', JSON.stringify(event, null, 2));
+
+              let body;
+              try {
+                  body = JSON.parse(event.body);
+                  console.log('Parsed body:', body);
+              } catch (err) {
+                  console.error('Failed to parse event.body:', err.message);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({ message: "Invalid request body" })
+                  };
+              }
+
+              const { brand, modelName, motherboardCompatibility, recommendedUses, color, memorySize, ssd, graphicsCard, processor, description, price, imageUrl, category } = body;
+
+              // Validation for required fields
+              if (!brand || !modelName || !motherboardCompatibility || !memorySize || !ssd || !graphicsCard || !processor || !price || !category) {
+                  console.error('Missing required fields');
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Missing required fields: brand, modelName, motherboardCompatibility, memorySize, ssd, graphicsCard, processor, price, category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate category
+              if (!VALID_CATEGORIES.includes(category)) {
+                  console.error(`Invalid category: ${category}`);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Invalid category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate imageUrl if provided
+              if (imageUrl && !isValidUrl(imageUrl)) {
+                  console.error('Invalid image URL:', imageUrl);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({ message: "Invalid image URL format" })
+                  };
+              }
+
+              // Check for duplicate product
+              const checkParams = {
+                  TableName: process.env.LAPTOP_TABLE || 'TechBayLaptops-dev',
+                  IndexName: 'BrandIndex',
+                  KeyConditionExpression: 'brand = :brand',
+                  ExpressionAttributeValues: { ':brand': brand }
+              };
+
+              try {
+                  const existing = await dynamo.send(new QueryCommand(checkParams));
+                  console.log('Duplicate check result:', existing);
+                  if (existing.Items?.some(item =>
+                      item.modelName === modelName &&
+                      item.motherboardCompatibility === motherboardCompatibility &&
+                      item.memorySize === memorySize &&
+                      item.ssd === ssd &&
+                      item.graphicsCard === graphicsCard &&
+                      item.processor === processor &&
+                      item.category === category
+                  )) {
+                      console.error('Duplicate product found');
+                      return {
+                          statusCode: 400,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          body: JSON.stringify({ message: "Product with these specifications already exists" })
+                      };
+                  }
+
+                  // Create the product item
+                  const productId = generateUUID();
+                  const newItem = {
+                      productId,
+                      brand,
+                      modelName,
+                      motherboardCompatibility,
+                      recommendedUses: recommendedUses || '',
+                      color: color || '',
+                      memorySize,
+                      ssd,
+                      graphicsCard,
+                      processor,
+                      description: description || '',
+                      price: parseFloat(price),
+                      category,
+                      createdAt: new Date().toISOString()
+                  };
+
+                  // Add imageUrl to the item only if it's provided and valid
+                  if (imageUrl) {
+                      newItem.imageUrl = imageUrl;
+                  }
+
+                  console.log(`Writing to table ${process.env.LAPTOP_TABLE || 'TechBayLaptops-dev'}:`, newItem);
+                  await dynamo.send(new PutCommand({
+                      TableName: process.env.LAPTOP_TABLE || 'TechBayLaptops-dev',
+                      Item: newItem
+                  }));
+
+                  return {
+                      statusCode: 200,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          success: true,
+                          message: "Product added successfully",
+                          productId,
+                          brand,
+                          modelName,
+                          category,
+                          ...(imageUrl && { imageUrl })
+                      })
+                  };
+              } catch (err) {
+                  console.error('Database error:', err.message, err.stack);
+                  return {
+                      statusCode: err.name === 'ResourceNotFoundException' ? 400 : 500,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Failed to add product",
+                          error: err.message,
+                          suggestion: "Check if the table exists and your Lambda has proper permissions"
+                      })
+                  };
+              }
+          };
+      Environment:
+        Variables:
+          LAPTOP_TABLE: !Ref LaptopTable
+      Timeout: 10
+
+  # Lambda Function for POST /api/products/pc (AddPC)
+  AddPCLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-addPC
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+
+          const VALID_CATEGORIES = [
+              'phones',
+              'tablets',
+              'televisions',
+              'headphones',
+              'PC Screens',
+              'PC',
+              'laptops'
+          ];
+
+          function generateUUID() {
+              return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+              });
+          }
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          exports.handler = async (event) => {
+              console.log('Lambda invoked with event:', JSON.stringify(event, null, 2));
+
+              let body;
+              try {
+                  body = JSON.parse(event.body);
+                  console.log('Parsed body:', body);
+              } catch (err) {
+                  console.error('Failed to parse event.body:', err.message);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({ message: "Invalid request body" })
+                  };
+              }
+
+              const { brand, modelName, motherboardCompatibility, recommendedUses, color, memorySize, ssd, graphicsCard, processor, description, price, imageUrl, category } = body;
+
+              // Validation checks
+              if (!brand || !modelName || !motherboardCompatibility || !memorySize || !ssd || !graphicsCard || !processor || !price || !category) {
+                  console.error('Missing required fields');
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Missing required fields",
+                          requiredFields: ["brand", "modelName", "motherboardCompatibility", "memorySize", "ssd", "graphicsCard", "processor", "price", "category"]
+                      })
+                  };
+              }
+
+              if (!VALID_CATEGORIES.includes(category)) {
+                  console.error(`Invalid category: ${category}`);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Invalid category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              if (imageUrl && !isValidUrl(imageUrl)) {
+                  console.error('Invalid image URL:', imageUrl);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({ message: "Invalid image URL format" })
+                  };
+              }
+
+              try {
+                  // Check for duplicates using Scan
+                  const scanParams = {
+                      TableName: process.env.TECHBAY_PC_TABLE || 'TechBayPC',
+                      FilterExpression: 'brand = :brand AND modelName = :modelName AND motherboardCompatibility = :mb AND memorySize = :mem AND ssd = :ssd AND graphicsCard = :gpu AND processor = :cpu AND category = :cat',
+                      ExpressionAttributeValues: {
+                          ':brand': brand,
+                          ':modelName': modelName,
+                          ':mb': motherboardCompatibility,
+                          ':mem': memorySize,
+                          ':ssd': ssd,
+                          ':gpu': graphicsCard,
+                          ':cpu': processor,
+                          ':cat': category
+                      }
+                  };
+
+                  const existing = await dynamo.send(new ScanCommand(scanParams));
+                  console.log('Duplicate check result:', existing);
+                  if (existing.Items && existing.Items.length > 0) {
+                      console.error('Duplicate PC found');
+                      return {
+                          statusCode: 400,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          body: JSON.stringify({
+                              message: "PC with these specifications already exists",
+                              existingItem: existing.Items[0]
+                          })
+                      };
+                  }
+
+                  // Create new PC item
+                  const pcId = generateUUID();
+                  const newItem = {
+                      pcId,
+                      brand,
+                      modelName,
+                      motherboardCompatibility,
+                      recommendedUses: recommendedUses || 'General use',
+                      color: color || 'Black',
+                      memorySize,
+                      ssd,
+                      graphicsCard,
+                      processor,
+                      description: description || '',
+                      price: parseFloat(price),
+                      category,
+                      createdAt: new Date().toISOString(),
+                      ...(imageUrl && { imageUrl })
+                  };
+
+                  console.log(`Writing to table ${process.env.TECHBAY_PC_TABLE || 'TechBayPC'}:`, newItem);
+                  await dynamo.send(new PutCommand({
+                      TableName: process.env.TECHBAY_PC_TABLE || 'TechBayPC',
+                      Item: newItem
+                  }));
+
+                  return {
+                      statusCode: 200,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          success: true,
+                          pcId,
+                          ...newItem
+                      })
+                  };
+
+              } catch (err) {
+                  console.error('Database error:', err.message, err.stack);
+                  return {
+                      statusCode: err.name === 'ResourceNotFoundException' ? 400 : 500,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Database operation failed",
+                          error: err.message,
+                          suggestion: "Check if the table exists and your Lambda has proper permissions"
+                      })
+                  };
+              }
+          };
+
+          function isValidUrl(string) {
+              try {
+                  new URL(string);
+                  return true;
+              } catch (_) {
+                  return false;
+              }
+          }
+      Environment:
+        Variables:
+          TECHBAY_PC_TABLE: !Ref TechBayPCTable
+      Timeout: 10
+
+  # Lambda Function for POST /api/products/pcscreen (AddPCScreen)
+  AddPCScreenLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-addPCScreen
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
+          const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
+
+          function generateUUID() {
+              return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+              });
+          }
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+          const snsClient = new SNSClient({});
+
+          // List of valid categories
+          const VALID_CATEGORIES = [
+              'phones',
+              'tablets',
+              'televisions',
+              'headphones',
+              'PC Screens',
+              'PC',
+              'laptops'
+          ];
+
+          exports.handler = async (event) => {
+              let body;
+              try {
+                  body = JSON.parse(event.body);
+              } catch (err) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ message: "Invalid request body" })
+                  };
+              }
+
+              const { brand, modelName, size, hz, resolution, aspectRatio, description, price, imageUrl, category } = body;
+
+              // Validate required fields
+              if (!brand || !modelName || !size || !hz || !resolution || !aspectRatio || !price || !category) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Missing required fields: brand, modelName, size, hz, resolution, aspectRatio, price, category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate category
+              if (!VALID_CATEGORIES.includes(category)) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Invalid category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Check for duplicate product using Scan (doesn't require index)
+              const checkParams = {
+                  TableName: process.env.PC_SCREENS_TABLE,
+                  FilterExpression: 'brand = :brand AND modelName = :modelName AND #size = :size AND hz = :hz AND resolution = :resolution AND aspectRatio = :aspectRatio AND category = :category',
+                  ExpressionAttributeNames: {
+                      '#size': 'size' // 'size' is a reserved word in DynamoDB
+                  },
+                  ExpressionAttributeValues: {
+                      ':brand': brand,
+                      ':modelName': modelName,
+                      ':size': size,
+                      ':hz': hz,
+                      ':resolution': resolution,
+                      ':aspectRatio': aspectRatio,
+                      ':category': category
+                  },
+                  Limit: 1 // We only need to know if at least one matching item exists
+              };
+
+              try {
+                  const existing = await dynamo.send(new ScanCommand(checkParams));
+                  if (existing.Items && existing.Items.length > 0) {
+                      return {
+                          statusCode: 400,
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              message: "Product with these specifications already exists",
+                              existingProduct: existing.Items[0]
+                          })
+                      };
+                  }
+
+                  // Generate product ID
+                  const productId = generateUUID();
+
+                  // Prepare the item to be saved
+                  const item = {
+                      productId,
+                      brand,
+                      modelName,
+                      size,
+                      hz,
+                      resolution,
+                      aspectRatio,
+                      description: description || '',
+                      price: parseFloat(price),
+                      category,
+                      createdAt: new Date().toISOString()
+                  };
+
+                  // Only add imageUrl if it's provided and not empty
+                  if (imageUrl && imageUrl.trim() !== '') {
+                      item.imageUrl = imageUrl.trim();
+                  }
+
+                  // Save to DynamoDB
+                  await dynamo.send(new PutCommand({
+                      TableName: process.env.PC_SCREENS_TABLE,
+                      Item: item
+                  }));
+
+                  // Send SNS notification
+                  await snsClient.send(new PublishCommand({
+                      TopicArn: process.env.SNS_TOPIC,
+                      Message: JSON.stringify({
+                          eventType: 'PRODUCT_ADDED',
+                          productType: 'PC_SCREEN',
+                          productId,
+                          brand,
+                          modelName,
+                          size,
+                          price
+                      })
+                  }));
+
+                  return {
+                      statusCode: 200,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          success: true,
+                          message: "PC Screen added successfully",
+                          productId,
+                          brand,
+                          modelName,
+                          category,
+                          imageUrl: item.imageUrl || null,
+                          item // Return the full item for reference
+                      })
+                  };
+              } catch (err) {
+                  console.error('Error adding PC Screen product:', err);
+                  return {
+                      statusCode: 500,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          success: false,
+                          message: "Failed to add PC Screen product",
+                          error: err.message,
+                          suggestion: "Check if the table exists and has proper permissions"
+                      })
+                  };
+              }
+          };
+      Environment:
+        Variables:
+          PC_SCREENS_TABLE: !Ref PCScreensTable
+          SNS_TOPIC: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:TechBayProductUpdates
+      Timeout: 10
+
+  # Lambda Function for POST /api/products/phone (AddPhone)
+  AddPhoneLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-addPhone
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+          const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
+
+          function generateUUID() {
+              return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+              });
+          }
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+          const snsClient = new SNSClient({});
+
+          // List of valid categories
+          const VALID_CATEGORIES = [
+              'phones',
+              'tablets',
+              'televisions',
+              'headphones',
+              'PC Screens',
+              'PC',
+              'laptops'
+          ];
+
+          function isValidUrl(string) {
+              try {
+                  new URL(string);
+                  return true;
+              } catch (_) {
+                  return false;
+              }
+          }
+
+          exports.handler = async (event) => {
+              let body;
+              try {
+                  body = JSON.parse(event.body);
+              } catch (err) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ message: "Invalid request body" })
+                  };
+              }
+
+              const { brand, modelName, memoryStorageCapacity, ram, displayResolutionMaximum, color, description, price, imageUrl, category } = body;
+
+              // Validation for required fields
+              if (!brand || !modelName || !memoryStorageCapacity || !ram || !displayResolutionMaximum || !price || !category) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Missing required fields: brand, modelName, memoryStorageCapacity, ram, displayResolutionMaximum, price, category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate category
+              if (!VALID_CATEGORIES.includes(category)) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Invalid category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate imageUrl if provided
+              if (imageUrl && !isValidUrl(imageUrl)) {
+                  return {
+                      statusCode: 400,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ message: "Invalid image URL format" })
+                  };
+              }
+
+              // Check for duplicate product
+              const checkParams = {
+                  TableName: process.env.PHONE_TABLE || 'TechBayPhones-dev',
+                  IndexName: 'BrandModelIndex',
+                  KeyConditionExpression: 'brand = :brand and modelName = :modelName',
+                  ExpressionAttributeValues: {
+                      ':brand': brand,
+                      ':modelName': modelName
+                  }
+              };
+
+              try {
+                  const existing = await dynamo.send(new QueryCommand(checkParams));
+                  if (existing.Items?.some(item =>
+                      item.memoryStorageCapacity === memoryStorageCapacity &&
+                      item.ram === ram &&
+                      item.displayResolutionMaximum === displayResolutionMaximum &&
+                      item.category === category
+                  )) {
+                      return {
+                          statusCode: 400,
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ message: "Product with these specifications already exists" })
+                      };
+                  }
+
+                  // Create the product item
+                  const productId = generateUUID();
+                  const newItem = {
+                      productId,
+                      brand,
+                      modelName,
+                      memoryStorageCapacity,
+                      ram,
+                      displayResolutionMaximum,
+                      color: color || '',
+                      description: description || '',
+                      price: parseFloat(price),
+                      category,
+                      createdAt: new Date().toISOString()
+                  };
+
+                  // Add imageUrl to the item only if it's provided and valid
+                  if (imageUrl) {
+                      newItem.imageUrl = imageUrl;
+                  }
+
+                  await dynamo.send(new PutCommand({
+                      TableName: process.env.PHONE_TABLE || 'TechBayPhones-dev',
+                      Item: newItem
+                  }));
+
+                  // Send SNS notification
+                  await snsClient.send(new PublishCommand({
+                      TopicArn: process.env.SNS_TOPIC,
+                      Message: JSON.stringify({
+                          event: 'NEW_PHONE_ADDED',
+                          productId,
+                          brand,
+                          modelName,
+                          category,
+                          ram,
+                          memoryStorageCapacity,
+                          price: parseFloat(price)
+                      })
+                  }));
+
+                  return {
+                      statusCode: 200,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          success: true,
+                          message: "Product added successfully",
+                          productId,
+                          category,
+                          ...(imageUrl && { imageUrl })
+                      })
+                  };
+              } catch (err) {
+                  console.error('Database error:', err);
+                  return {
+                      statusCode: 500,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          message: "Failed to add product",
+                          error: err.message,
+                          suggestion: "Check if the table exists and your Lambda has proper permissions"
+                      })
+                  };
+              }
+          };
+      Environment:
+        Variables:
+          PHONE_TABLE: !Ref PhoneTable
+          SNS_TOPIC: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:TechBayProductUpdates
+      Timeout: 10
+
+  # Lambda Function for POST /api/products/tablet (AddTablet)
+  AddTabletLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-addTablet
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+
+          function generateUUID() {
+              return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+              });
+          }
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          // List of valid categories
+          const VALID_CATEGORIES = [
+              'phones',
+              'tablets',
+              'televisions',
+              'headphones',
+              'PC Screens',
+              'PC',
+              'laptops'
+          ];
+
+          exports.handler = async (event) => {
+              console.log('Lambda invoked with event:', JSON.stringify(event, null, 2));
+
+              let body;
+              try {
+                  body = JSON.parse(event.body);
+                  console.log('Parsed body:', body);
+              } catch (err) {
+                  console.error('Failed to parse event.body:', err.message);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({ message: "Invalid request body" })
+                  };
+              }
+
+              const { brand, modelName, memoryStorageCapacity, ram, displayResolutionMaximum, color, description, price, imageUrl, category } = body;
+
+              // Validate required fields
+              if (!brand || !modelName || !memoryStorageCapacity || !ram || !displayResolutionMaximum || !price || !category) {
+                  console.error('Missing required fields');
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Missing required fields: brand, modelName, memoryStorageCapacity, ram, displayResolutionMaximum, price, category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate category
+              if (!VALID_CATEGORIES.includes(category)) {
+                  console.error(`Invalid category: ${category}`);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Invalid category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Check for duplicate product
+              const checkParams = {
+                  TableName: process.env.TABLET_TABLE || 'TechBayTablets-dev',
+                  IndexName: 'BrandModelIndex',
+                  KeyConditionExpression: 'brand = :brand and modelName = :modelName',
+                  ExpressionAttributeValues: {
+                      ':brand': brand,
+                      ':modelName': modelName
+                  }
+              };
+
+              try {
+                  const existing = await dynamo.send(new QueryCommand(checkParams));
+                  console.log('Duplicate check result:', existing);
+                  if (existing.Items?.some(item =>
+                      item.memoryStorageCapacity === memoryStorageCapacity &&
+                      item.ram === ram &&
+                      item.displayResolutionMaximum === displayResolutionMaximum &&
+                      item.category === category
+                  )) {
+                      console.error('Duplicate product found');
+                      return {
+                          statusCode: 400,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          body: JSON.stringify({ message: "Product with these specifications already exists" })
+                      };
+                  }
+
+                  // Generate product ID
+                  const productId = generateUUID();
+
+                  // Prepare the item to be saved
+                  const item = {
+                      productId,
+                      brand,
+                      modelName,
+                      memoryStorageCapacity,
+                      ram,
+                      displayResolutionMaximum,
+                      color: color || '',
+                      description: description || '',
+                      price: parseFloat(price),
+                      category,
+                      createdAt: new Date().toISOString()
+                  };
+
+                  // Only add imageUrl if it's provided and not empty
+                  if (imageUrl && imageUrl.trim() !== '') {
+                      item.imageUrl = imageUrl.trim();
+                  }
+
+                  console.log(`Writing to table ${process.env.TABLET_TABLE || 'TechBayTablets-dev'}:`, item);
+                  // Save to DynamoDB
+                  await dynamo.send(new PutCommand({
+                      TableName: process.env.TABLET_TABLE || 'TechBayTablets-dev',
+                      Item: item
+                  }));
+
+                  return {
+                      statusCode: 200,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Product added successfully",
+                          productId,
+                          category,
+                          imageUrl: item.imageUrl || null
+                      })
+                  };
+              } catch (err) {
+                  console.error('Database error:', err.message, err.stack);
+                  return {
+                      statusCode: err.name === 'ResourceNotFoundException' ? 400 : 500,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Failed to add product",
+                          error: err.message,
+                          suggestion: "Check if the table exists and your Lambda has proper permissions"
+                      })
+                  };
+              }
+          };
+      Environment:
+        Variables:
+          TABLET_TABLE: !Ref TabletTable
+      Timeout: 10
+
+  # Lambda Function for POST /api/products/television (AddTelevision)
+  AddTelevisionLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-addTelevision
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/LabRole
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+
+          function generateUUID() {
+              return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                  const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                  return v.toString(16);
+              });
+          }
+
+          const dynamoClient = new DynamoDBClient({});
+          const dynamo = DynamoDBDocumentClient.from(dynamoClient);
+
+          // List of valid categories
+          const VALID_CATEGORIES = [
+              'phones',
+              'tablets',
+              'televisions',
+              'headphones',
+              'PC Screens',
+              'PC',
+              'laptops'
+          ];
+
+          function isValidUrl(string) {
+              try {
+                  new URL(string);
+                  return true;
+              } catch (_) {
+                  return false;
+              }
+          }
+
+          exports.handler = async (event) => {
+              console.log('Lambda invoked with event:', JSON.stringify(event, null, 2));
+
+              let body;
+              try {
+                  body = JSON.parse(event.body);
+                  console.log('Parsed body:', body);
+              } catch (err) {
+                  console.error('Failed to parse event.body:', err.message);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({ message: "Invalid request body" })
+                  };
+              }
+
+              const { brand, modelName, size, hz, resolution, aspectRatio, description, price, imageUrl, category } = body;
+
+              // Validation for required fields
+              if (!brand || !modelName || !size || !hz || !resolution || !aspectRatio || !price || !category) {
+                  console.error('Missing required fields');
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Missing required fields: brand, modelName, size, hz, resolution, aspectRatio, price, category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate category
+              if (!VALID_CATEGORIES.includes(category)) {
+                  console.error(`Invalid category: ${category}`);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Invalid category",
+                          validCategories: VALID_CATEGORIES
+                      })
+                  };
+              }
+
+              // Validate imageUrl if provided
+              if (imageUrl && !isValidUrl(imageUrl)) {
+                  console.error('Invalid image URL:', imageUrl);
+                  return {
+                      statusCode: 400,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({ message: "Invalid image URL format" })
+                  };
+              }
+
+              // Check for duplicate product
+              const checkParams = {
+                  TableName: process.env.TV_TABLE || 'TechBayTelevisions-dev',
+                  IndexName: 'BrandIndex',
+                  KeyConditionExpression: 'brand = :brand',
+                  ExpressionAttributeValues: { ':brand': brand }
+              };
+
+              try {
+                  const existing = await dynamo.send(new QueryCommand(checkParams));
+                  console.log('Duplicate check result:', existing);
+                  if (existing.Items?.some(item =>
+                      item.modelName === modelName &&
+                      item.size === size &&
+                      item.hz === hz &&
+                      item.resolution === resolution &&
+                      item.aspectRatio === aspectRatio &&
+                      item.category === category
+                  )) {
+                      console.error('Duplicate product found');
+                      return {
+                          statusCode: 400,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          body: JSON.stringify({ message: "Product with these specifications already exists" })
+                      };
+                  }
+
+                  // Create the product item
+                  const productId = generateUUID();
+                  const newItem = {
+                      productId,
+                      brand,
+                      modelName,
+                      size,
+                      hz,
+                      resolution,
+                      aspectRatio,
+                      description: description || '',
+                      price: parseFloat(price),
+                      category,
+                      createdAt: new Date().toISOString()
+                  };
+
+                  // Add imageUrl to the item only if it's provided and valid
+                  if (imageUrl) {
+                      newItem.imageUrl = imageUrl;
+                  }
+
+                  console.log(`Writing to table ${process.env.TV_TABLE || 'TechBayTelevisions-dev'}:`, newItem);
+                  await dynamo.send(new PutCommand({
+                      TableName: process.env.TV_TABLE || 'TechBayTelevisions-dev',
+                      Item: newItem
+                  }));
+
+                  return {
+                      statusCode: 200,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          success: true,
+                          message: "Product added successfully",
+                          productId,
+                          brand,
+                          modelName,
+                          category,
+                          ...(imageUrl && { imageUrl })
+                      })
+                  };
+              } catch (err) {
+                  console.error('Database error:', err.message, err.stack);
+                  return {
+                      statusCode: err.name === 'ResourceNotFoundException' ? 400 : 500,
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      body: JSON.stringify({
+                          message: "Failed to add product",
+                          error: err.message,
+                          suggestion: "Check if the table exists and your Lambda has proper permissions"
+                      })
+                  };
+              }
+          };
+      Environment:
+        Variables:
+          TV_TABLE: !Ref TVTable
+      Timeout: 10
+
+  # DELETE Method for /api/cart
+  CartDeleteMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref CartResource
+      HttpMethod: DELETE
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref TechBayApiAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RemoveProductFromCartLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      RequestParameters:
+        method.request.header.Authorization: true
+
+  # GET Method for /api/cart
+  CartGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref CartResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref TechBayApiAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetProductsFromCartLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      RequestParameters:
+        method.request.header.Authorization: true
+
+  # POST Method for /api/cart
+  CartPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref CartResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref TechBayApiAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddToCartLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 201
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      RequestParameters:
+        method.request.header.Authorization: true
+
+  # OPTIONS Method for /api/cart (CORS)
+  CartOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref CartResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''DELETE,GET,POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type,Authorization'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''DELETE,GET,POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,Authorization'''
+
+  # GET Method for /api/orders
+  OrdersGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref OrdersResource
+      HttpMethod: GET
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref TechBayApiAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetPurchasesOrdersLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      RequestParameters:
+        method.request.header.Authorization: true
+
+  # POST Method for /api/orders
+  OrdersPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref OrdersResource
+      HttpMethod: POST
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref TechBayApiAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PurchasingProductsLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 401
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      RequestParameters:
+        method.request.header.Authorization: true
+
+  # OPTIONS Method for /api/orders (CORS)
+  OrdersOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref OrdersResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''GET,POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type,Authorization'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type,Authorization'''
+
+  # GET Method for /api/products
+  ProductsGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref ProductsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetProductsLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      RequestParameters: {}
+
+  # OPTIONS Method for /api/products (CORS)
+  ProductsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref ProductsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''GET,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # GET Method for /api/products/{productId}
+  ProductIdGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref ProductIdResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetProductByIdLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      RequestParameters:
+        method.request.path.productId: true
+        method.request.querystring.category: true
+
+  # DELETE Method for /api/products/{productId}
+  ProductIdDeleteMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref ProductIdResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteProductLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 404
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+      RequestParameters:
+        method.request.path.productId: true
+
+  # OPTIONS Method for /api/products/{productId} (CORS)
+  ProductIdOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref ProductIdResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''GET,DELETE,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''GET,DELETE,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # POST Method for /api/products/headphone
+  HeadphonePostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref HeadphoneResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddHeadphoneLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+
+  # OPTIONS Method for /api/products/headphone (CORS)
+  HeadphoneOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref HeadphoneResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # POST Method for /api/products/laptop
+  LaptopPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref LaptopResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddLaptopLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+
+  # OPTIONS Method for /api/products/laptop (CORS)
+  LaptopOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref LaptopResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # POST Method for /api/products/pc
+  PCPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref PCResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddPCLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+
+  # OPTIONS Method for /api/products/pc (CORS)
+  PCOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref PCResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # POST Method for /api/products/pcscreen
+  PCScreenPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref PCScreenResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddPCScreenLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+
+  # OPTIONS Method for /api/products/pcscreen (CORS)
+  PCScreenOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref PCScreenResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # POST Method for /api/products/phone
+  PhonePostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref PhoneResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddPhoneLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+
+  # OPTIONS Method for /api/products/phone (CORS)
+  PhoneOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref PhoneResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # POST Method for /api/products/tablet
+  TabletPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref TabletResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddTabletLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+
+  # OPTIONS Method for /api/products/tablet (CORS)
+  TabletOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref TabletResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # POST Method for /api/products/television
+  TelevisionPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref TelevisionResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AddTelevisionLambda.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 400
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+        - StatusCode: 500
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+
+  # OPTIONS Method for /api/products/television (CORS)
+  TelevisionOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      ResourceId: !Ref TelevisionResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+            ResponseTemplates:
+              application/json: '{"status": "success"}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: '''*'''
+            method.response.header.Access-Control-Allow-Methods: '''POST,OPTIONS'''
+            method.response.header.Access-Control-Allow-Headers: '''Content-Type'''
+
+  # API Gateway Deployment
+  TechBayApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref TechBayApiGateway
+      StageName: prod
+    DependsOn:
+      - CartDeleteMethod
+      - CartGetMethod
+      - CartPostMethod
+      - CartOptionsMethod
+      - OrdersGetMethod
+      - OrdersPostMethod
+      - OrdersOptionsMethod
+      - ProductsGetMethod
+      - ProductsOptionsMethod
+      - ProductIdGetMethod
+      - ProductIdDeleteMethod
+      - ProductIdOptionsMethod
+      - HeadphonePostMethod
+      - HeadphoneOptionsMethod
+      - LaptopPostMethod
+      - LaptopOptionsMethod
+      - PCPostMethod
+      - PCOptionsMethod
+      - PCScreenPostMethod
+      - PCScreenOptionsMethod
+      - PhonePostMethod
+      - PhoneOptionsMethod
+      - TabletPostMethod
+      - TabletOptionsMethod
+      - TelevisionPostMethod
+      - TelevisionOptionsMethod
+
+  # Lambda Permissions for API Gateway Invocation
+  LambdaInvokePermissionRemove:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RemoveProductFromCartLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionGetCart:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetProductsFromCartLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionPostCart:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AddToCartLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionGetOrders:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetPurchasesOrdersLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionPostOrders:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PurchasingProductsLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionGetProducts:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetProductsLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionGetProductById:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetProductByIdLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionDeleteProduct:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DeleteProductLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionAddHeadphone:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AddHeadphoneLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionAddLaptop:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AddLaptopLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionAddPC:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AddPCLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionAddPCScreen:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AddPCScreenLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionAddPhone:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AddPhoneLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionAddTablet:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AddTabletLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  LambdaInvokePermissionAddTelevision:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AddTelevisionLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TechBayApiGateway}/*/*
+    DependsOn: TechBayApiDeployment
+
+  # SNS Topic for Product Updates
+  ProductUpdatesSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: TechBayProductUpdates
+
+Outputs:
+  BucketName:
+    Description: The name of the S3 bucket for frontend hosting.
+    Value: !Ref TechBayFrontendBucket
+  WebsiteURL:
+    Description: The URL of the static website.
+    Value: !GetAtt TechBayFrontendBucket.WebsiteURL
+  UserPoolId:
+    Description: The ID of the Cognito User Pool.
+    Value: !Ref TechBayUserPool
+  UserPoolClientId:
+    Description: The ID of the Cognito User Pool Client.
+    Value: !Ref TechBayUserPoolClient
+  CognitoDomain:
+    Description: The Cognito Hosted UI domain.
+    Value: !Sub https://${AWS::StackName}-techbay.auth.${AWS::Region}.amazoncognito.com
+  RedirectUri:
+    Description: The redirect URI for Cognito authentication.
+    Value: !Sub https://${TechBayFrontendBucket}.s3-website-${AWS::Region}.amazonaws.com/index.html
+  ApiEndpoint:
+    Description: The URL of the API Gateway endpoint.
+    Value: !Sub https://${TechBayApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod
+  Region:
+    Description: The AWS region for Cognito and API.
+    Value: us-east-1
+  SNSTopicArn:
+    Description: The ARN of the SNS topic for product updates.
+    Value: !Ref ProductUpdatesSNSTopic
