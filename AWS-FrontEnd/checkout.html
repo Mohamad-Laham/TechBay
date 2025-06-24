@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechBay - Checkout</title>
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/checkout.css">
+</head>
+<body>
+  <header class="header-section">
+    <div class="container">
+      <a href="index.html" class="title">TechBay</a>
+      <div id="auth-section" class="header-actions">
+        <!-- Content will be dynamically added based on auth status -->
+      </div>
+      <a href="cart.html" class="cart-btn">Cart (0)</a>
+    </div>
+  </header>
+
+  <main class="container checkout-container">
+    <div class="checkout-header">
+      <h1>Checkout</h1>
+      <p>Review your order before payment</p>
+    </div>
+
+    <div id="checkout-items" class="checkout-items-container"></div>
+
+    <div class="checkout-summary">
+      <div id="checkout-total" class="checkout-total"></div>
+      <button id="payment-btn" class="payment-btn">Proceed to Payment</button>
+    </div>
+  </main>
+
+  <script type="module" src="js/auth.js"></script>
+  <script type="module">
+    import { login, getUserGroups, isAuthenticated, handleRedirect, logout, isAdmin } from './js/auth.js';
+    import config from './js/config.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const authSection = document.getElementById('auth-section');
+      await handleRedirect();
+
+      const authenticated = isAuthenticated();
+      if (authenticated) {
+        const isUserAdmin = await isAdmin();
+        if (isUserAdmin) {
+          const adminLink = document.createElement('a');
+          adminLink.href = 'admin.html';
+          adminLink.className = 'admin-link';
+          adminLink.textContent = 'Admin Panel';
+          authSection.appendChild(adminLink);
+        }
+
+        const logoutLink = document.createElement('a');
+        logoutLink.href = '#';
+        logoutLink.className = 'login-btn';
+        logoutLink.textContent = 'Log Out';
+        logoutLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          logout();
+        });
+        authSection.appendChild(logoutLink);
+      } else {
+        const loginLink = document.createElement('a');
+        loginLink.href = '#';
+        loginLink.className = 'login-btn';
+        loginLink.textContent = 'Log In';
+        loginLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          login();
+        });
+        authSection.appendChild(loginLink);
+      }
+    });
+  </script>
+  <script type="module" src="js/checkout.js"></script>
+</body>
+</html>
