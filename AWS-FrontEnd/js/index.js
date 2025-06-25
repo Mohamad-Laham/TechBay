@@ -1,3 +1,6 @@
+//import { API_BASE_URL } from '../config/apiConfig.js';
+
+
 // Helper function to make authenticated API calls (optional auth for index)
 async function authenticatedFetch(url, options = {}) {
   const idToken = localStorage.getItem('idToken');
@@ -29,9 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartLinks = document.querySelectorAll('.cart-btn');
     const idToken = localStorage.getItem('idToken');
 
+    //`${API_BASE_URL}/api/products/phone
     if (idToken) {
       try {
-        const response = await authenticatedFetch('https://7q4o04d3nh.execute-api.us-east-1.amazonaws.com/prod/api/cart', {
+        const response = await authenticatedFetch(`https://7q4o04d3nh.execute-api.us-east-1.amazonaws.com/prod/api/cart`, {
           method: 'GET'
         });
         const data = await response.json();

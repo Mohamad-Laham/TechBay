@@ -26,8 +26,6 @@
       <div class="product-card" data-type="pcscreen">Add New PC Screen</div>
       <div class="product-card" data-type="headphone">Add New Headphone</div>
     </div>
-    <!-- Product Creation Form (Placeholder - Modals will handle this) -->
-    <!-- Modals are triggered by buttons and will appear on top -->
     <!-- Phone Modal -->
     <div id="phone-modal" class="modal" style="display: none;">
       <div class="modal-content">
@@ -113,7 +111,7 @@
           </div>
           <div>
             <label>Image URL:</label>
-            <input type="url" name="imageUrl" placeholder="Enter image URL" required>
+            <input type="url" name="imageUrl" placeholder="Enter image URL">
           </div>
           <div class="modal-buttons">
             <button type="button" class="cancel-btn" data-modal="phone">Cancel</button>
@@ -122,7 +120,6 @@
         </form>
       </div>
     </div>
-
     <!-- Tablet Modal -->
     <div id="tablet-modal" class="modal" style="display: none;">
       <div class="modal-content">
@@ -185,7 +182,7 @@
           </div>
           <div>
             <label>Color:</label>
-            <select name="color" required>
+            <select name="color">
               <option value="">Select Color</option>
               <option value="Space Gray">Space Gray</option>
               <option value="Silver">Silver</option>
@@ -204,7 +201,7 @@
           </div>
           <div>
             <label>Image URL:</label>
-            <input type="url" name="imageUrl" placeholder="Enter image URL" required>
+            <input type="url" name="imageUrl" placeholder="Enter image URL">
           </div>
           <div class="modal-buttons">
             <button type="button" class="cancel-btn" data-modal="tablet">Cancel</button>
@@ -213,7 +210,6 @@
         </form>
       </div>
     </div>
-
     <!-- Television Modal -->
     <div id="television-modal" class="modal" style="display: none;">
       <div class="modal-content">
@@ -229,6 +225,17 @@
               <option value="Sony">Sony</option>
               <option value="TCL">TCL</option>
               <option value="Hisense">Hisense</option>
+            </select>
+          </div>
+          <div>
+            <label>Model Name:</label>
+            <select name="modelName" required>
+              <option value="">Select Model</option>
+              <option value="QLED Q80">QLED Q80</option>
+              <option value="OLED C3">OLED C3</option>
+              <option value="BRAVIA XR">BRAVIA XR</option>
+              <option value="Roku Smart TV">Roku Smart TV</option>
+              <option value="U8K">U8K</option>
             </select>
           </div>
           <div>
@@ -283,7 +290,7 @@
           </div>
           <div>
             <label>Image URL:</label>
-            <input type="url" name="imageUrl" placeholder="Enter image URL" required>
+            <input type="url" name="imageUrl" placeholder="Enter image URL">
           </div>
           <div class="modal-buttons">
             <button type="button" class="cancel-btn" data-modal="television">Cancel</button>
@@ -292,7 +299,6 @@
         </form>
       </div>
     </div>
-
     <!-- PC Modal -->
     <div id="pc-modal" class="modal" style="display: none;">
       <div class="modal-content">
@@ -322,12 +328,87 @@
             </select>
           </div>
           <div>
+            <label>Motherboard Compatibility:</label>
+            <select name="motherboardCompatibility" required>
+              <option value="">Select Compatibility</option>
+              <option value="ATX">ATX</option>
+              <option value="Micro-ATX">Micro-ATX</option>
+              <option value="Mini-ITX">Mini-ITX</option>
+              <option value="E-ATX">E-ATX</option>
+            </select>
+          </div>
+          <div>
+            <label>Recommended Uses:</label>
+            <select name="recommendedUses">
+              <option value="">Select Use</option>
+              <option value="Gaming">Gaming</option>
+              <option value="Business">Business</option>
+              <option value="Creative Work">Creative Work</option>
+              <option value="Everyday Use">Everyday Use</option>
+            </select>
+          </div>
+          <div>
+            <label>Color:</label>
+            <select name="color">
+              <option value="">Select Color</option>
+              <option value="Black">Black</option>
+              <option value="Silver">Silver</option>
+              <option value="White">White</option>
+            </select>
+          </div>
+          <div>
+            <label>Memory Size (GB):</label>
+            <select name="memorySize" required>
+              <option value="">Select Memory</option>
+              <option value="8">8GB</option>
+              <option value="16">16GB</option>
+              <option value="32">32GB</option>
+              <option value="64">64GB</option>
+            </select>
+          </div>
+          <div>
+            <label>SSD (GB):</label>
+            <select name="ssd" required>
+              <option value="">Select SSD</option>
+              <option value="256">256GB</option>
+              <option value="512">512GB</option>
+              <option value="1024">1TB</option>
+              <option value="2048">2TB</option>
+            </select>
+          </div>
+          <div>
+            <label>Graphics Card:</label>
+            <select name="graphicsCard" required>
+              <option value="">Select GPU</option>
+              <option value="Integrated">Integrated</option>
+              <option value="NVIDIA RTX 3050">NVIDIA RTX 3050</option>
+              <option value="NVIDIA RTX 3060">NVIDIA RTX 3060</option>
+              <option value="NVIDIA RTX 3070">NVIDIA RTX 3070</option>
+              <option value="AMD Radeon RX 6700">AMD Radeon RX 6700</option>
+            </select>
+          </div>
+          <div>
+            <label>Processor:</label>
+            <select name="processor" required>
+              <option value="">Select CPU</option>
+              <option value="Intel Core i5">Intel Core i5</option>
+              <option value="Intel Core i7">Intel Core i7</option>
+              <option value="Intel Core i9">Intel Core i9</option>
+              <option value="AMD Ryzen 5">AMD Ryzen 5</option>
+              <option value="AMD Ryzen 7">AMD Ryzen 7</option>
+            </select>
+          </div>
+          <div>
+            <label>Description:</label>
+            <textarea name="description"></textarea>
+          </div>
+          <div>
             <label>Price ($):</label>
             <input type="number" step="0.01" name="price" required>
           </div>
           <div>
             <label>Image URL:</label>
-            <input type="url" name="imageUrl" placeholder="Enter image URL" required>
+            <input type="url" name="imageUrl" placeholder="Enter image URL">
           </div>
           <div class="modal-buttons">
             <button type="button" class="cancel-btn" data-modal="pc">Cancel</button>
@@ -336,7 +417,6 @@
         </form>
       </div>
     </div>
-
     <!-- Laptop Modal -->
     <div id="laptop-modal" class="modal" style="display: none;">
       <div class="modal-content">
@@ -352,6 +432,17 @@
               <option value="HP">HP</option>
               <option value="Lenovo">Lenovo</option>
               <option value="Asus">Asus</option>
+            </select>
+          </div>
+          <div>
+            <label>Model Name:</label>
+            <select name="modelName" required>
+              <option value="">Select Model</option>
+              <option value="MacBook Pro">MacBook Pro</option>
+              <option value="XPS 13">XPS 13</option>
+              <option value="Spectre x360">Spectre x360</option>
+              <option value="ThinkPad X1 Carbon">ThinkPad X1 Carbon</option>
+              <option value="ROG Zephyrus">ROG Zephyrus</option>
             </select>
           </div>
           <div>
@@ -439,7 +530,7 @@
           </div>
           <div>
             <label>Image URL:</label>
-            <input type="url" name="imageUrl" placeholder="Enter image URL" required>
+            <input type="url" name="imageUrl" placeholder="Enter image URL">
           </div>
           <div class="modal-buttons">
             <button type="button" class="cancel-btn" data-modal="laptop">Cancel</button>
@@ -448,7 +539,6 @@
         </form>
       </div>
     </div>
-
     <!-- Headphone Modal -->
     <div id="headphone-modal" class="modal" style="display: none;">
       <div class="modal-content">
@@ -467,6 +557,17 @@
             </select>
           </div>
           <div>
+            <label>Model Name:</label>
+            <select name="modelName" required>
+              <option value="">Select Model</option>
+              <option value="WH-1000XM5">WH-1000XM5</option>
+              <option value="QuietComfort 45">QuietComfort 45</option>
+              <option value="HD 660S">HD 660S</option>
+              <option value="AirPods Max">AirPods Max</option>
+              <option value="Live 660NC">Live 660NC</option>
+            </select>
+          </div>
+          <div>
             <label>Description:</label>
             <textarea name="description"></textarea>
           </div>
@@ -476,7 +577,7 @@
           </div>
           <div>
             <label>Image URL:</label>
-            <input type="url" name="imageUrl" placeholder="Enter image URL" required>
+            <input type="url" name="imageUrl" placeholder="Enter image URL">
           </div>
           <div class="modal-buttons">
             <button type="button" class="cancel-btn" data-modal="headphone">Cancel</button>
@@ -485,7 +586,6 @@
         </form>
       </div>
     </div>
-
     <!-- PC Screen Modal -->
     <div id="pcscreen-modal" class="modal" style="display: none;">
       <div class="modal-content">
@@ -501,6 +601,17 @@
               <option value="Samsung">Samsung</option>
               <option value="Asus">Asus</option>
               <option value="Acer">Acer</option>
+            </select>
+          </div>
+          <div>
+            <label>Model Name:</label>
+            <select name="modelName" required>
+              <option value="">Select Model</option>
+              <option value="UltraSharp U2723QE">UltraSharp U2723QE</option>
+              <option value="UltraGear 27GP950">UltraGear 27GP950</option>
+              <option value="Odyssey G7">Odyssey G7</option>
+              <option value="ROG Swift PG279QM">ROG Swift PG279QM</option>
+              <option value="Predator XB273K">Predator XB273K</option>
             </select>
           </div>
           <div>
@@ -555,7 +666,7 @@
           </div>
           <div>
             <label>Image URL:</label>
-            <input type="url" name="imageUrl" placeholder="Enter image URL" required>
+            <input type="url" name="imageUrl" placeholder="Enter image URL">
           </div>
           <div class="modal-buttons">
             <button type="button" class="cancel-btn" data-modal="pcscreen">Cancel</button>
